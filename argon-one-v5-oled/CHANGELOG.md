@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.0.1] - 2026-08-19
+
+- Add the official Home Assistant S6-overlay AppArmor startup baseline.
+- Permit read-only access to the app payload copied into the image root.
+
 ## [2.0.0] - 2026-08-19
 
 ### Security / Permissions (breaking)
@@ -24,7 +29,6 @@ All notable changes to this project will be documented in this file.
   profile that explicitly denies `/config`, `/ssl`, `/share`, `/backup`.
 - Restricted `arch` to `aarch64` only (Raspberry Pi 5 has no
   armhf/armv7 target).
-- Added `watchdog: true` for automatic restart on unexpected exit.
 
 ### Added
 - **Exceptions-first alert screens**: a new pure fault-evaluation engine

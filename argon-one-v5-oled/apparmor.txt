@@ -3,21 +3,38 @@
 profile argon_one_oled_display flags=(attach_disconnected,mediate_deleted) {
   #include <abstractions/base>
 
+  file,
+  signal (send) set=(kill,term,int,hup,cont),
+
   capability setgid,
   capability setuid,
 
-  # S6-Overlay
+  # S6-Overlay baseline required by the Home Assistant base image.
+  # Keep this aligned with the official Home Assistant AppArmor example.
+  /init ix,
   /bin/** ix,
   /usr/bin/** ix,
-  /usr/lib/bashio/** ix,
-  /etc/s6/** rix,
-  /run/s6/** rix,
+  /run/{s6,s6-rc*,service}/** ix,
+  /package/** ix,
+  /command/** ix,
   /etc/services.d/** rwix,
   /etc/cont-init.d/** rwix,
   /etc/cont-finish.d/** rwix,
-  /init rix,
-  /var/run/** mrwkl,
-  /var/run/ mrwkl,
+  /run/{,**} rwk,
+  /dev/tty rw,
+
+  # Bashio and temporary files used during normal process startup.
+  /usr/lib/bashio/** ix,
+  /tmp/** rwk,
+
+  # Application payload copied into the image root.
+  /run.sh rix,
+  /argon_oled.py r,
+  /system_info.py r,
+  /supervisor_api.py r,
+  /screens.py r,
+  /faults.py r,
+  /logo.png r,
 
   # OLED display: I2C bus 1 only (Raspberry Pi 5 default I2C bus)
   /dev/i2c-1 rw,
