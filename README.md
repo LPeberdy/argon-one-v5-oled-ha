@@ -188,11 +188,15 @@ appropriately elevated, audited access path.
 
 ## Attribution & License
 
-This add-on is a hardened fork of the Home Assistant add-on originally
+This add-on is a hardened modified distribution of upstream version 1.16.2 of the Home Assistant add-on originally
 **developed by Ben Wolstencroft**, itself based on the Argon ONE setup
 script from **Argon40**, and converted to a containerized, `bashio`-driven
 Home Assistant add-on format. See `argon-one-v5-oled/CHANGELOG.md` for
 the full version history, including the pre-fork `1.0.0`–`1.16.2` work
 this release builds on.
 
-Licensed under the MIT License — see `argon-one-v5-oled/LICENSE`.
+Upstream: <https://github.com/BenWolstencroft/home-assistant-addons/tree/main/argon-oled-addon>
+
+Licensed under the MIT License — see `LICENSE`, the preserved
+`argon-one-v5-oled/LICENSE`, and `THIRD_PARTY_NOTICES.md`. This independent
+project is not endorsed by or affiliated with Argon Forty.
