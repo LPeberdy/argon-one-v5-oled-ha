@@ -90,11 +90,6 @@ class SupervisorAPI:
         """Get supervisor info. Returns (data, available)."""
         return self._get_data('supervisor/info')
 
-    def get_addons(self):
-        """Get list of addons. Returns (addons_list, available)."""
-        data, available = self._get_data('addons')
-        return data.get('addons', []), available
-
     def get_backups(self):
         """Get list of backups. Returns (backups_list, available)."""
         data, available = self._get_data('backups')
@@ -161,7 +156,7 @@ class SupervisorAPI:
                 queries succeeded (i.e. the Supervisor API answered with
                 the addon's configured role). If False, treat HA status
                 as unknown/unavailable rather than assuming "all clear".
-            updates: int - count of pending updates (supervisor + core + addons)
+            updates: int - count of pending Supervisor + Core updates
             last_backup: str or None - ISO timestamp of most recent backup
             backup_state: 'OK' | 'None' | 'Unknown'
         """
@@ -174,7 +169,6 @@ class SupervisorAPI:
 
         supervisor_info, supervisor_available = self.get_supervisor_info()
         core_info, core_available = self.get_core_info()
-        addons, addons_available = self.get_addons()
         backups, backups_available = self.get_backups()
 
         # Consider HA status "available" only if we could reach the core
@@ -187,11 +181,6 @@ class SupervisorAPI:
                 status_info['updates'] += 1
             if core_info.get('update_available', False):
                 status_info['updates'] += 1
-            if addons_available:
-                for addon in addons:
-                    if addon.get('update_available', False):
-                        status_info['updates'] += 1
-
         if backups_available:
             self._log(f"Found {len(backups)} backups")
             if backups:

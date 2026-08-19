@@ -51,25 +51,21 @@ metrics and display them — nothing else. Concretely, `config.yaml` and
 | GPIO | `gpio: false` | The optional GPIO4 button is **omitted this release** — see [GPIO4 button](#gpio4-button-omitted-this-release). |
 | Config volume | not mapped | No `map: config:rw` (or any other host folder). The add-on never reads or writes Home Assistant's `/config`. |
 | AppArmor | `apparmor: true` | Enforced, not disabled — profile in `apparmor.txt` explicitly denies `/config`, `/ssl`, `/share`, `/backup` and only allows `/dev/i2c-1`, `/proc`/`/sys` metric files it reads, and its own `/data`. |
-| Supervisor API | `hassio_api: true`, `hassio_role: default` | **Read-only status only.** No `homeassistant_api` (Core API) access at all. |
+| Supervisor API | `hassio_api: true`, `hassio_role: backup` | Narrow status + backup role. The client has no POST method and only performs GET requests. No `homeassistant_api` (Core API) access. |
 | Host control | none | No `host/reboot`, `host/shutdown`, or any other mutating endpoint is called. `supervisor_api.py`'s client **only issues `GET` requests** — there is no POST capability in the code at all. |
 | Addon/manager role | none | The add-on never requests `manager` or `admin` roles, and never manages other add-ons. |
 
 See [Status Contract](#status-contract) for exactly what read-only data
 this add-on requests and how it behaves when that data isn't available.
 
-⚠️ **Unverified assumption:** `hassio_role: default` is configured as the
-*expected* lowest viable role for the status endpoints this add-on reads
-(`supervisor/info`, `core/info`, `addons`, `backups`, `network/info`,
-`homeassistant/info`). Home Assistant's role-gating for these specific
-endpoints has not been confirmed against a live Supervisor in this
-environment (this repository has no network access). **If any of these
-calls return HTTP 403 in practice**, the add-on will correctly report
-that data as "unavailable" (see below) rather than fail — but you should
-verify on real hardware whether `default` is sufficient, or whether the
-next-lowest role that still excludes host control is required instead.
-Please [open an issue](../../issues) with your findings so this can be
-confirmed for future users.
+The `backup` role is intentional and live-verified. Supervisor's role
+middleware permits this role to read normal `*/info` endpoints and the
+backup API, while excluding App management, host control, OS, store,
+network mutation, and administrator endpoints. The token could authorize
+backup mutations, so defense in depth is provided by `supervisor_api.py`:
+its client implements GET only and exposes no generic method or POST path.
+App update counts are deliberately omitted because listing Apps would
+require the much broader `manager` role.
 
 ## Status Contract
 
@@ -113,7 +109,8 @@ No user acknowledgement is required or possible; there is no ping-buttoning thro
 4. **LOW STORAGE** — free space on `/data` ≤ `storage_min_free_percent`
    (default 10%). Only evaluated when storage was obtainable.
 5. **HA STATUS** — Supervisor status API unreachable or role insufficient.
-6. **UPDATES** — one or more pending updates (supervisor/core/addons).
+6. **UPDATES** — one or more pending Supervisor/Core updates. App update
+   counts are omitted to avoid granting the `manager` role.
 
 See `argon-one-v5-oled/tests/test_faults.py` for the exact, unit-tested
 semantics of each condition, and `test_config_safety.py` for the

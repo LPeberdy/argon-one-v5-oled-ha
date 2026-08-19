@@ -66,10 +66,10 @@ class TestConfigYamlPermissions(unittest.TestCase):
         self.assertNotIn(role, ('manager', 'admin'),
                           "hassio_role must not grant host-control-capable roles")
 
-    def test_hassio_role_is_lowest_viable_default(self):
+    def test_hassio_role_is_narrow_backup_role(self):
         role = top_level_scalar(self.config_text, 'hassio_role')
-        self.assertEqual(role, 'default',
-                          "Expected lowest-viable 'default' role; see README for live-verification note")
+        self.assertEqual(role, 'backup',
+                          "Expected narrow backup role for GET-only backup/status reads")
 
     def test_hassio_api_enabled_for_status_only(self):
         self.assertEqual(top_level_scalar(self.config_text, 'hassio_api'), 'true')

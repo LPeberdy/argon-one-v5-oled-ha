@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.1.0] - 2026-08-19
+
+- Use the narrow Supervisor `backup` role after live verification showed
+  that `default` correctly denies backup reads.
+- Remove App inventory/update queries rather than requesting `manager`;
+  update status now covers Supervisor and Core only.
+
 ## [2.0.1] - 2026-08-19
 
 - Add the official Home Assistant S6-overlay AppArmor startup baseline.

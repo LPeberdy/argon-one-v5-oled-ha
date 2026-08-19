@@ -140,11 +140,10 @@ add-on is built for aarch64 only.
   but PWM-based fault detection still works.
 
 ### "HA STATUS N/A" / hastatus shows unavailable
-This means the Supervisor API call failed or `hassio_role: default`
-doesn't have permission for the relevant endpoint on your Supervisor
-version — see the [permissions note](../README.md#permissions) in the
-repository README. This is a known area that needs live verification;
-please report findings via the repository's issue tracker.
+This means a read-only Supervisor API call failed. The App uses the narrow
+`backup` role so it can show backup age plus normal system info without
+receiving App-management or host-control access. See the
+[permissions note](../README.md#permissions).
 
 ## Architecture
 

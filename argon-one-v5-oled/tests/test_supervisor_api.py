@@ -156,19 +156,16 @@ class TestSupervisorAPI(unittest.TestCase):
         """Test getting HA system status when the API is fully reachable"""
         mock_supervisor = Mock(status_code=200, json=Mock(return_value={'data': {'update_available': False}}))
         mock_core = Mock(status_code=200, json=Mock(return_value={'data': {'update_available': True}}))
-        mock_addons = Mock(status_code=200, json=Mock(return_value={
-            'data': {'addons': [{'update_available': True}, {'update_available': False}]}
-        }))
         mock_backups = Mock(status_code=200, json=Mock(return_value={
             'data': {'backups': [{'date': '2025-11-20T10:00:00+00:00'}]}
         }))
 
-        mock_get.side_effect = [mock_supervisor, mock_core, mock_addons, mock_backups]
+        mock_get.side_effect = [mock_supervisor, mock_core, mock_backups]
 
         status = self.api.get_ha_system_status()
 
         self.assertTrue(status['available'])
-        self.assertEqual(status['updates'], 2)  # core + 1 addon
+        self.assertEqual(status['updates'], 1)  # core only
         self.assertEqual(status['backup_state'], 'OK')
         self.assertIsNotNone(status['last_backup'])
 
@@ -177,7 +174,7 @@ class TestSupervisorAPI(unittest.TestCase):
     def test_get_ha_system_status_unavailable_on_403(self, mock_get):
         """Insufficient role (403) must surface as available=False, not '0 updates'."""
         forbidden = Mock(status_code=403)
-        mock_get.side_effect = [forbidden, forbidden, forbidden, forbidden]
+        mock_get.side_effect = [forbidden, forbidden, forbidden]
 
         status = self.api.get_ha_system_status()
 
