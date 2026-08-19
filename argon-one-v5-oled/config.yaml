@@ -1,0 +1,37 @@
+name: Argon ONE OLED Display
+version: 2.0.0
+slug: argon_one_oled_display
+description: Read-only system status on the Argon ONE Industria 128x64 OLED (Raspberry Pi 5)
+url: https://github.com/LPeberdy/argon-one-v5-oled-ha
+arch:
+  - aarch64
+init: false
+startup: application
+boot: auto
+homeassistant_api: false
+hassio_api: true
+hassio_role: default
+gpio: false
+apparmor: true
+devices:
+  - /dev/i2c-1
+options:
+  temp_unit: C
+  switch_duration: 30
+  screen_list: "clock hastatus cpu fan ram storage ip uptime"
+  debug_logging: false
+  show_credits: true
+  cpu_temp_alert_c: 80
+  fan_min_temp_c: 55
+  backup_max_age_hours: 48
+  storage_min_free_percent: 10
+schema:
+  temp_unit: list(C|F)
+  switch_duration: int(5,300)
+  screen_list: str
+  debug_logging: bool
+  show_credits: bool
+  cpu_temp_alert_c: int(40,100)
+  fan_min_temp_c: int(20,90)
+  backup_max_age_hours: int(1,720)
+  storage_min_free_percent: int(1,50)

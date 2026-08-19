@@ -1,0 +1,41 @@
+#include <tunables/global>
+
+profile argon_one_oled_display flags=(attach_disconnected,mediate_deleted) {
+  #include <abstractions/base>
+
+  capability setgid,
+  capability setuid,
+
+  # S6-Overlay
+  /bin/** ix,
+  /usr/bin/** ix,
+  /usr/lib/bashio/** ix,
+  /etc/s6/** rix,
+  /run/s6/** rix,
+  /etc/services.d/** rwix,
+  /etc/cont-init.d/** rwix,
+  /etc/cont-finish.d/** rwix,
+  /init rix,
+  /var/run/** mrwkl,
+  /var/run/ mrwkl,
+
+  # OLED display: I2C bus 1 only (Raspberry Pi 5 default I2C bus)
+  /dev/i2c-1 rw,
+
+  # Read-only host metrics used for status screens
+  /proc/stat r,
+  /proc/meminfo r,
+  /proc/uptime r,
+  /proc/loadavg r,
+  /sys/class/thermal/thermal_zone0/temp r,
+  /sys/class/hwmon/** r,
+
+  # Addon's own private data directory (bundled logo, optional overrides)
+  /data/** rw,
+
+  # deny everything else explicitly not covered above
+  deny /config/** rwklx,
+  deny /ssl/** rwklx,
+  deny /share/** rwklx,
+  deny /backup/** rwklx,
+}

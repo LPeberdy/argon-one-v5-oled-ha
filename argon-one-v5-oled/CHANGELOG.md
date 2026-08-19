@@ -1,0 +1,774 @@
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+## [2.0.0] - 2026-08-19
+
+### Security / Permissions (breaking)
+- **Removed GPIO entirely**: `gpio: false`, no `gpiod` dependency, no
+  button monitoring thread, no GPIO4 button support this release (see
+  repository README's GPIO4 assessment section).
+- **Removed host power control entirely**: no `host/reboot`,
+  `host/shutdown`, or any Supervisor POST call anywhere in the codebase.
+  `supervisor_api.py`'s client is now `GET`-only.
+- **Removed the config volume**: no more `map: config:rw`; the add-on
+  never reads or writes Home Assistant's `/config`.
+- **Lowered Supervisor role**: `hassio_role` changed from `manager` to
+  `default` (lowest viable, for read-only status only). This assumption
+  needs live verification - see README.
+- **Restricted I2C access**: from all of `/dev/i2c-0` through
+  `/dev/i2c-26` down to `/dev/i2c-1` only, in both `config.yaml` and
+  `apparmor.txt`.
+- **Re-enabled AppArmor enforcement** (`apparmor: true`, was disabled to
+  work around GPIO access which no longer exists) with a tightened
+  profile that explicitly denies `/config`, `/ssl`, `/share`, `/backup`.
+- Restricted `arch` to `aarch64` only (Raspberry Pi 5 has no
+  armhf/armv7 target).
+- Added `watchdog: true` for automatic restart on unexpected exit.
+
+### Added
+- **Exceptions-first alert screens**: a new pure fault-evaluation engine
+  (`faults.py`) that supersedes routine screen rotation with prioritized
+  alerts for excessive CPU temperature, a stopped fan when cooling is
+  expected, missing/old backups, low storage, unavailable HA status, and
+  pending updates. Fully unit tested (`tests/test_faults.py`).
+- New `cpu` screen now also shows 1/5/15-minute load average
+  (`get_load_average()`), not just instantaneous usage.
+- New `uptime` screen.
+- New configurable alert thresholds: `cpu_temp_alert_c`,
+  `fan_min_temp_c`, `backup_max_age_hours`, `storage_min_free_percent`.
+- New `tests/test_config_safety.py` asserting the least-privilege
+  invariants above directly against `config.yaml`/`apparmor.txt`/source,
+  so a future privilege regression fails tests.
+- Repository-level `repository.yaml` and a new top-level `README.md`
+  covering install, permissions, status contract, maintenance, and
+  rollback.
+
+### Changed
+- **Storage now reads `/data` instead of `/`**: the container root
+  filesystem is an overlay and does not represent real host free space;
+  `/data` is always bind-mounted from the host's actual data partition.
+  If unobtainable, the screen now shows "Unavailable" instead of a
+  possibly-misleading number.
+- **HA status now distinguishes "zero" from "unavailable"**: previously
+  a failed/forbidden Supervisor call silently looked identical to "0
+  updates" / healthy backups. `get_ha_system_status()` now returns an
+  explicit `available` flag, and the `hastatus` screen shows "N/A" when
+  false.
+- Default `screen_list` updated to
+  `"clock hastatus cpu fan ram storage ip uptime"` (dropped `logo` and
+  `qr` from the default rotation; both remain available as opt-in
+  screens).
+- Credits splash screen no longer generates a QR code (removed a
+  startup dependency on QR generation for a purely cosmetic screen that
+  pointed at a specific fork's repository rather than the one the user
+  installed from); attribution is now text-only on screen, in full in
+  the repository README.
+
+### Removed
+- `smbus2` and `cbor2` from `requirements.txt` (unused dependencies).
+- `libgpiod`/`py3-libgpiod` from the Docker image.
+- Unused `addon.json` (Home Assistant Supervisor only reads
+  `config.yaml`; this file was dead, drifting metadata).
+- All button-hold reboot/shutdown confirmation UI and logic.
+
+## [1.16.2] - 2025-12-01
+
+### Changed
+- Removed status box indicator from Fan Screen for cleaner, simpler display
+- Fan screen now shows only RPM value and PWM progress bar
+
+## [1.16.1] - 2025-12-01
+
+### Improved
+- **Fan Screen Layout** - RPM value and label now on same line for compact display
+- Removed "PWM:" label for cleaner interface
+- Increased progress bar height from 8px to 10px for better visibility
+- Adjusted status indicator position to align with taller progress bar
+
+### Documentation
+- Added comprehensive section on enabling Raspberry Pi 5 native fan
+- Included `/mnt/boot/config.txt` configuration instructions
+- Documented 4-level fan curve with temperature thresholds
+- Added explanation of PWM speeds and hysteresis values
+
+## [1.16.0] - 2025-12-01
+
+### Added
+- **Fan Screen** - New screen displaying Raspberry Pi 5 native fan information
+  - Shows fan RPM when tachometer is connected
+  - Displays PWM duty cycle percentage (0-100%)
+  - Visual status indicator (filled box when running)
+  - Reads data from kernel hwmon interface (`/sys/class/hwmon`)
+- `get_fan_speed()` method in SystemInfo class for reading fan metrics
+- Fan screen included in default screen rotation
+
+### Changed
+- Default screen list updated to include `fan` screen
+- Screen list now: `"logo clock cpu storage ram temp fan ip"`
+
+### Technical
+- Fan data read from `/sys/class/hwmon/hwmon*/fan1_input` (RPM)
+- PWM duty cycle read from `/sys/class/hwmon/hwmon*/pwm1` (0-255 scale)
+- Supports Raspberry Pi 5 native 4-pin fan connector
+- Compatible with kernel cooling device drivers
+
+## [1.15.1] - 2025-11-21
+
+### Improved
+- Reduced header bar height from 14px to 12px for more usable screen space
+- Moved header text up 2px for better vertical alignment
+- Adjusted CPU temperature section positioning (moved up 2px)
+- Optimized vertical spacing across all screens
+
+## [1.15.0] - 2025-11-21
+
+### Added
+- Credits splash screen displaying on addon startup
+- QR code linking to GitHub repository on credits screen
+- Version number display on credits screen
+- `show_credits` configuration option (enabled by default)
+- Automatic version detection from config.yaml
+
+### Changed
+- Progress bars now support custom units (%, °C, °F)
+- `draw_progress_bar()` accepts `unit` parameter for flexible value display
+- CPU temperature now displays actual temperature value instead of percentage
+- Backup date format changed to DD/MM/YY on HA Status screen
+- CPU screen now uses horizontal progress bar for temperature display
+
+### Improved
+- Credits screen shows once at startup, then never again
+- Temperature progress bar fills based on 20-80°C (or 68-176°F) range
+- More intuitive temperature visualization on CPU screen
+
+## [1.14.0] - 2025-11-21
+
+### Changed
+- Refactored progress bars to include percentage text internally
+- Progress bar percentage labels now drawn by `draw_progress_bar()` method
+- Reduced 7-segment clock digit size by 10% for better screen fit
+- Clock scale reduced from 1.75 to 1.575 for improved layout
+
+### Improved
+- Cleaner code organization with self-contained progress bar rendering
+- Eliminated duplicate `draw.text()` calls for progress bar percentages
+- Better visual balance on clock screen with smaller digits
+
+### UI Refinements
+- Removed "Scan for HA" label from QR code screen
+- Increased status box heights on HA Status screen for better text containment
+- Progress bar percentages repositioned to right side of bars
+- Progress bars reduced from 117px to 90px width for percentage placement
+
+## [1.13.3] - 2025-11-21
+
+### Fixed
+- Fixed memory and storage screen crashes due to incorrect return value unpacking
+- draw_ram() and draw_storage() now correctly handle 3-value returns from system_info methods
+
+## [1.13.2] - 2025-11-20
+
+### Added
+- Comprehensive unit test suite for all modules (system_info, supervisor_api, screens)
+- 100+ test cases covering success and error scenarios
+- Tests work without physical hardware using mocks
+- Cross-platform test support (Windows, Linux, Mac)
+- Tests organized in dedicated `tests/` subfolder
+- Test runner script and documentation (README_TESTING.md)
+
+### Technical
+- All hardware dependencies (OLED, GPIO, I2C) are mocked in tests
+- HTTP requests to Supervisor API are mocked
+- File system operations are simulated
+- Tests can run on development machines without Raspberry Pi
+
+## [1.13.1] - 2025-11-20
+
+### Fixed
+- Fixed ScreenRenderer method signatures to properly create canvas contexts internally
+- All draw methods now handle their own rendering lifecycle without requiring draw parameter
+- Resolved runtime error where draw_logo() was missing required positional argument
+
+## [1.13.0] - 2025-11-20
+
+### Changed
+- Completed modularization refactoring: main file now imports and uses the extracted modules
+- Reduced main file size by 51% (from 1105 lines to 538 lines)
+- Eliminated all code duplication between argon_oled.py and module files
+- Main orchestrator now properly delegates to SystemInfo, SupervisorAPI, and ScreenRenderer classes
+
+### Technical
+- Updated Dockerfile to include all Python module files (system_info.py, supervisor_api.py, screens.py)
+- Improved code maintainability and separation of concerns
+
+## [1.12.1] - 2025-11-20
+
+### Changed
+- Improved clock digit spacing to ensure at least 1 pixel between each number
+- Enhanced colon dots between time segments (HH:MM:SS) for better visibility
+
+## [1.12.0] - 2025-11-20
+
+### Changed
+- Major code refactoring and modularization
+- Extracted system metrics into `system_info.py` module
+- Extracted Supervisor API communication into `supervisor_api.py` module
+- Extracted all screen rendering logic into `screens.py` module
+- Created helper methods to reduce code duplication (~200 lines saved)
+- Improved button cancel detection during reboot/shutdown confirmation
+- Screen rotation now pauses during power hold and confirmation
+- Better error handling and debug logging throughout
+
+### Added
+- Reboot/shutdown confirmation countdown with visual progress bar
+- Cancel functionality during 5-second confirmation period
+- Button state tracking to prevent accidental power commands
+- Module documentation in MODULARIZATION.md
+
+### Fixed
+- Cancel button now works correctly during power confirmation
+- Screen no longer flickers during confirmation countdown
+- Button detection uses correct Value.ACTIVE/INACTIVE constants
+
+## [1.11.1] - 2025-11-20
+
+### Changed
+- Clock now displays full HH:MM:SS in 7-segment style
+- All six digits shown in segmented format across the screen
+- Optimized digit sizing to fit all time components
+
+## [1.11.0] - 2025-11-20
+
+### Added
+- 7-segment digital clock display for improved readability
+- Date moved to header bar with clock icon
+- Seconds display at bottom in smaller font
+
+### Changed
+- Clock screen redesigned with proper segmented digits
+- Time now displays as HH:MM in large 7-segment style
+
+## [1.10.5] - 2025-11-20
+
+### Fixed
+- Button cancel detection now uses correct Value.ACTIVE/INACTIVE constants
+- Cancel button should now work properly during confirmation countdown
+
+## [1.10.4] - 2025-11-20
+
+### Added
+- Debug logging for button state during confirmation countdown
+- Better error handling for button detection
+
+### Changed
+- Improved button state tracking during cancel detection
+
+## [1.10.3] - 2025-11-20
+
+### Fixed
+- Improved cancel detection logic during confirmation countdown
+- Cancel now works by detecting button release then press pattern
+- Countdown displays immediately without waiting
+
+## [1.10.2] - 2025-11-20
+
+### Fixed
+- Cancel button now works correctly during confirmation countdown
+- Added button release detection before countdown starts
+- Added debounce delay to prevent false triggers
+
+## [1.10.1] - 2025-11-20
+
+### Fixed
+- Screen no longer flickers during confirmation countdown
+- Screen rotation stays paused during entire confirmation process
+- Screen rotation resumes only after cancellation
+
+## [1.10.0] - 2025-11-20
+
+### Added
+- Confirmation screen with 5-second countdown after reboot/shutdown is selected
+- Visual progress bar showing time remaining during confirmation
+- Ability to cancel reboot/shutdown by pressing button during countdown
+- "Press to cancel" instruction displayed during confirmation
+
+### Changed
+- Reboot/shutdown now requires explicit confirmation instead of executing immediately
+- Improved user safety by preventing accidental system restarts
+
+## [1.9.8] - 2025-11-20
+
+### Changed
+- Screen rotation and refresh now pause when button is held after reboot threshold (10+ seconds)
+- Prevents screen from switching away while user is holding button to confirm reboot/shutdown
+
+### Added
+- New `button_in_power_hold` flag to track power command state
+
+## [1.9.7] - 2025-11-20
+
+### Fixed
+- OLED screen now clears immediately after issuing reboot/shutdown commands
+- Screen clears on addon shutdown for any reason (clean exit)
+
+### Added
+- New cleanup() method to ensure screen is always cleared on exit
+- Reduced wait time after power commands from 5s to 2s before exit
+
+### Changed
+- Better cleanup handling in finally block using dedicated cleanup method
+
+## [1.9.6] - 2025-11-20
+
+### Added
+- Startup permission check for power management capabilities
+- Automatic detection of manager role permissions
+- User-friendly error message on OLED when trying to reboot/shutdown without permissions
+- Displays "NO PERMISSION - Need manager role" message for 3 seconds when attempting power actions without proper role
+
+### Changed
+- Power management features now gracefully disabled if addon lacks manager role
+- Clear startup logging indicating whether power management is enabled or disabled
+- Button long-press (10s/15s) now checks permissions before attempting power actions
+
+### Improved
+- Better user experience - addon works normally without manager role, just without power features
+- Clear feedback to user about permission requirements
+
+## [1.9.5] - 2025-11-20
+
+### Fixed
+- Added `hassio_role: manager` to config.yaml to grant permissions for host reboot/shutdown
+- Resolves 403 Forbidden error when attempting to reboot or shutdown via button
+
+### Security Note
+- Addon now requires "Manager" role to perform host power operations
+- This is necessary for the button-triggered reboot/shutdown functionality
+
+## [1.9.4] - 2025-11-20
+
+### Changed
+- Converted all reboot/shutdown logging to use debug_log method for consistency
+- API logging now respects debug_logging setting
+- Traceback output only shown when debug_logging is enabled
+- Removed sys.stdout.flush() calls and time.sleep(5) that are no longer needed
+
+## [1.9.3] - 2025-11-20
+
+### Fixed
+- Enhanced error handling and logging for reboot/shutdown API calls
+- Added detailed response logging (status code, response body)
+- Added Content-Type header to API requests
+- Added traceback printing for exceptions
+- Increased wait time after API call to ensure logs are visible
+
+### Changed
+- Now logs supervisor token presence (without revealing the token)
+- Captures and logs API response status and body for debugging
+- Better timeout handling with specific messages
+
+## [1.9.2] - 2025-11-20
+
+### Changed
+- Power actions now wait for button release before executing
+- Display updates at 10 seconds: "REBOOTING - Release to confirm"
+- Display updates at 15 seconds: "SHUTDOWN - Release to confirm" (overrides reboot)
+- Action is determined by total hold time when button is released
+- User must release button to confirm the action
+
+### Improved
+- Better user feedback - shows intended action while button is still held
+- Prevents accidental triggers - requires deliberate release to execute
+- Clear on-screen confirmation of which action will be performed
+
+## [1.9.1] - 2025-11-20
+
+### Fixed
+- Fixed reboot/shutdown commands to use Home Assistant Supervisor API instead of shell commands
+- Changed from `hassio host reboot/shutdown` to proper API calls at `http://supervisor/host/reboot` and `http://supervisor/host/shutdown`
+- Added error handling for API calls
+
+## [1.9.0] - 2025-11-20
+
+### Added
+- Power management via button holds:
+  - Hold button for 10+ seconds: System reboot
+  - Hold button for 15+ seconds: System shutdown
+- Visual feedback on OLED display when reboot/shutdown is triggered
+- Continuous monitoring of button hold duration to trigger power actions
+
+### Changed
+- Button monitor now checks hold duration every 100ms during press
+- Power actions (reboot/shutdown) execute immediately when threshold is reached
+- OLED displays status message before executing power command
+
+## [1.8.0] - 2025-11-20
+
+### Fixed
+- Implemented correct gpiod v2 API based on official documentation
+- Use module-level gpiod.request_lines() instead of Chip.request_lines()
+- Import Direction, Value, and Bias from gpiod.line
+- Use LineSettings with direction=Direction.INPUT and bias=Bias.PULL_UP
+- Use get_value(PIN) instead of get_values([PIN])
+- Properly handle Value.ACTIVE and Value.INACTIVE for button state
+
+## [1.7.5] - 2025-11-20
+
+### Changed
+- Print all available gpiod module attributes for debugging
+- Try config dict approach for request_lines instead of line_request object
+
+## [1.7.4] - 2025-11-20
+
+### Fixed
+- Updated to use libgpiod v2 API (request_lines, line_request configuration)
+- Changed from get_lines() to request_lines() with line_request config
+- Updated button monitor to pass pin number to get_values()
+
+## [1.7.3] - 2025-11-20
+
+### Added
+- API introspection to list available methods on gpiod.Chip object for debugging
+- Will print available API methods if AttributeError occurs
+
+## [1.7.2] - 2025-11-20
+
+### Fixed
+- Updated to use correct py3-libgpiod API (Alpine package uses different methods than pip package)
+- Changed from get_line() to get_lines() for line access
+- Changed button monitoring from event-based to polling with get_values()
+- Fixed initialization to use LINE_REQ_DIR_IN with pull-up bias
+
+## [1.7.1] - 2025-11-20
+
+### Fixed
+- GPIO chip detection now uses full device paths (/dev/gpiochip0) instead of just chip names
+- Now iterates through all discovered GPIO chips instead of hardcoded list
+- Better error handling - tests each chip for pin availability before selecting
+
+## [1.7.0] - 2025-11-20
+
+### Changed
+- Disabled AppArmor protection mode (apparmor: false) to allow GPIO device access
+- Required for button functionality to work properly in containerized environment
+
+## [1.6.9] - 2025-11-20
+
+### Added
+- Enhanced GPIO debugging to list available /dev/gpiochip* devices
+- More detailed error messages for GPIO initialization attempts
+- Extended chip search to include gpiochip0-4
+
+## [1.6.8] - 2025-11-20
+
+### Fixed
+- Critical bug: font and logo loading code was mistakenly inside debug_log() method
+- This caused logo to reload on every debug message, creating infinite loop spam
+- Moved font and logo loading back to __init__() where it belongs
+
+## [1.6.7] - 2025-11-20
+
+### Fixed
+- GPIO initialization now tries multiple gpiochip devices (gpiochip0, gpiochip4, gpiochip1)
+- Removed duplicate logo loading code that was causing infinite loop log spam
+- Logo loading now only happens once in load_logo() method
+
+## [1.6.6] - 2025-11-20
+
+### Changed
+- Switched from RPi.GPIO to libgpiod for container compatibility
+- RPi.GPIO doesn't work in Docker containers; libgpiod provides proper containerized GPIO access
+- Button functionality now fully supported in Home Assistant addon environment
+
+## [1.6.5] - 2025-11-20
+
+### Changed
+- Updated base images from 9.1.7 to 19.0.0 (latest)
+- Will retry RPi.GPIO compilation with newer base image
+
+## [1.6.4] - 2025-11-20
+
+### Changed
+- Temporarily disabled button functionality due to RPi.GPIO compilation issues with musl in base image
+- All display features continue to work normally with auto-rotation
+- Button support will be re-enabled when compatible build environment is available
+
+## [1.6.3] - 2025-11-20
+
+### Fixed
+- Docker build issue: added musl upgrade step before installing build dependencies to resolve version conflicts
+
+## [1.6.2] - 2025-11-20
+
+### Fixed
+- Docker build issue: restructured build process to use virtual packages, avoiding musl version conflicts
+- Build dependencies are now installed temporarily and removed after RPi.GPIO compilation
+
+## [1.6.1] - 2025-11-20
+
+### Fixed
+- Docker build issue: added required build dependencies (gcc, python3-dev, musl-dev) for RPi.GPIO compilation
+
+## [1.6.0] - 2025-11-20
+
+### Added
+- Physical button support on GPIO pin 4
+- Single press: advance to next screen
+- Double press: go back to previous screen
+- Long press: return to first screen
+- Button presses reset auto-rotation timer
+
+### Dependencies
+- Added RPi.GPIO for button monitoring
+- Enabled GPIO access in addon configuration
+
+## [1.5.3] - 2025-11-20
+
+### Added
+- Support links to GitHub repository and Home Assistant Community forum
+
+### Changed
+- Updated README to reference I2C Configurator community add-on for easier setup
+- Removed "Supported Screens" section from README (consolidated into Configuration)
+- Cleaned up screen name references (removed `logo1v5` and `status` aliases)
+
+## [1.5.2] - 2025-11-20
+
+### Added
+- Default logo image bundled with addon
+- Logo screen now shows graphical logo by default instead of text
+- Users can still override with custom logo in /data/ or /config/ directories
+
+### Changed
+- Logo fallback order: /data/ → /config/ → bundled default → text-based
+
+## [1.5.1] - 2025-11-19
+
+### Added
+- Debug logging configuration option (defaults to off)
+- All verbose logging now controlled by `debug_logging` setting
+- Cleaner logs by default with option to enable detailed debugging
+
+### Changed
+- Refactored debug logging to use centralized `debug_log()` method
+- Reduced default log verbosity significantly
+
+## [1.5.0] - 2025-11-19
+
+### Added
+- Home Assistant system status screen ("hastatus" or "status")
+- Displays number of available updates (supervisor, core, and addons)
+- Shows last backup date and time
+- Visual indicators for system health (OK/Action Needed)
+- Status summary showing if system is healthy or needs attention
+
+## [1.4.2] - 2025-11-19
+
+### Fixed
+- IP address now correctly shows host IP instead of container IP
+- QR code URL now uses host IP address, making it accessible from network
+- Both features now query Supervisor network and Home Assistant info APIs
+
+## [1.4.1] - 2025-11-19
+
+### Changed
+- QR code screen now uses full display area without header for maximum size
+- Improved QR code drawing using direct matrix rendering for better compatibility
+
+### Fixed
+- Resolved PIL.image compatibility issues with QR code generation
+
+## [1.4.0] - 2025-11-19
+
+### Added
+- QR code screen displaying Home Assistant URL
+- New "qr" screen type that generates a scannable QR code
+- Auto-detection of Home Assistant URL from Supervisor API
+- Fallback to IP-based URL if API is unavailable
+- QR code added to default screen rotation
+
+### Dependencies
+- Added qrcode Python package
+
+## [1.3.6] - 2025-11-19
+
+### Fixed
+- Replaced `textbbox()` with approximate text centering for older Pillow compatibility
+- IP address now displays correctly on all Pillow versions
+
+## [1.3.4] - 2025-11-19
+
+### Fixed
+- Removed emoji icons causing Latin-1 encoding errors
+- Replaced emoji decorations with text-only headers
+- Improved font compatibility
+
+## [1.3.3] - 2025-11-19
+
+### Fixed
+- Removed leftover `setup_buttons()` call that was causing startup crash
+- Fixed run.sh script parsing error with screen_list configuration
+- Removed duplicate configuration exports in run.sh
+
+## [1.3.2] - 2025-11-19
+
+### Removed
+- Button support (not working with current hardware configuration)
+- RPi.GPIO dependency
+- GPIO button monitoring code
+- button_debug configuration option
+
+### Changed
+- Simplified to automatic screen rotation only
+- Reduced dependencies and complexity
+
+## [1.3.1] - 2025-11-19
+
+### Added
+- Custom logo image support on logo screen
+- Automatic image loading from `/data/` or `/config/` directories
+- Support for PNG, JPG, and BMP image formats
+- Automatic image conversion to monochrome
+- Automatic image scaling to fit 128x64 display
+- Fallback to text-based logo if no image found
+
+### Changed
+- Logo screen now displays custom image if available
+- Image is automatically centered on screen
+
+## [1.3.0] - 2025-11-19
+
+### Added
+- Inverted headers (white background, black text) for all screens
+- Screen-specific icons (⚡ CPU, 💾 RAM, 💿 Storage, 🌡️ Temp, 🌐 Network, ⏰ Clock)
+- Styled progress bars: striped (CPU), solid (RAM), dotted (Storage)
+- Visual warning indicators when usage exceeds 80%
+- Visual thermometer display on temperature screen
+- Decorative borders and frames for logo and clock screens
+- Connection status indicator on network screen
+- Centered and bordered IP address display
+
+### Changed
+- Enhanced visual contrast and information hierarchy
+- Improved layout spacing and positioning
+- More dynamic and visually interesting displays
+
+## [1.2.1] - 2025-11-19
+
+### Fixed
+- Corrected to use only GPIO 4 (the only available GPIO pin)
+- Single button now cycles through all screens
+- Simplified button handling for one button operation
+
+## [1.2.0] - 2025-11-19
+
+### Changed
+- **MAJOR**: Switched from I2C to GPIO for button detection
+- Using RPi.GPIO library for button handling
+- Event-driven button detection with hardware debouncing (300ms)
+- Immediate button response via GPIO callbacks
+
+### Added
+- RPi.GPIO dependency
+- Pull-up resistors configuration for button
+- Falling edge detection for button press
+
+### Fixed
+- Buttons now work correctly on Argon ONE OLED
+- No more I2C polling errors
+
+## [1.1.4] - 2025-11-19
+
+### Fixed
+- Button monitoring now uses discovered I2C addresses from device scan
+- Excludes OLED address (0x3C) from button monitoring
+- Remembers working I2C address to avoid repeated scanning
+- Shows which I2C addresses will be monitored at startup
+- Only logs I2C read errors for first 3 polls to reduce noise
+
+### Changed
+- Dynamic I2C address detection instead of hardcoded addresses
+- Better thread startup logging
+
+## [1.1.3] - 2025-11-19
+
+### Fixed
+- Added forced logging output with sys.stdout.flush() to ensure logs appear
+- Button monitoring thread now logs first 10 polls regardless of debug setting
+- Main loop logs first 10 iterations for troubleshooting
+- Added thread alive status check
+- Enhanced startup logging
+
+## [1.1.2] - 2025-11-19
+
+### Added
+- I2C device scanning at startup to detect available devices
+- Button debug mode configuration option
+- Detailed logging of button press events with hex and binary values
+- Multiple I2C address detection (tries 0x01, 0x1A, 0x20, 0x30)
+- Enhanced button state detection with multiple bit pattern support
+
+### Changed
+- More verbose button press logging
+- Better error reporting with stack traces
+- Polls multiple I2C addresses to find buttons
+
+## [1.1.1] - 2025-11-19
+
+### Fixed
+- Changed button implementation from GPIO to I2C polling
+- Buttons now correctly read from I2C address 0x01
+- Removed gpiod dependency (not needed)
+- Button polling every 100ms for responsive input
+
+## [1.1.0] - 2025-11-19
+
+### Added
+- Button support for manual screen navigation
+- GPIO 4 button cycles to next screen
+- GPIO 17 button cycles to previous screen
+- Button presses reset auto-rotation timer
+- Background thread for button monitoring
+
+### Changed
+- Using gpiod library for GPIO access
+- Improved error handling for GPIO operations
+
+## [1.0.3] - 2025-11-19
+
+### Fixed
+- Removed conflicting build dependencies (gcc, musl-dev) that caused package conflicts
+- Simplified Dockerfile to only include necessary runtime dependencies
+- Using system py3-pillow package to avoid compilation issues
+
+## [1.0.2] - 2025-11-19
+
+### Fixed
+- Added gcc and build dependencies to prevent Pillow compilation errors
+- Install luma.oled with --no-deps to use system Pillow package
+- Added explicit luma.core installation to satisfy dependencies
+
+## [1.0.1] - 2025-11-19
+
+### Fixed
+- Fixed Pillow build issues by using pre-built Alpine package instead of compiling from source
+- Added necessary image library dependencies for OLED display
+
+## [1.0.0] - 2025-11-19
+
+### Added
+- Initial release of Argon ONE OLED Display add-on for Home Assistant
+- Support for multiple screen displays (logo, clock, cpu, ram, storage, temp, ip)
+- Configurable screen rotation duration
+- Temperature display in Celsius or Fahrenheit
+- Real-time system monitoring
+- Support for armhf, armv7, and aarch64 architectures
+
+### Features
+- Display current date and time
+- CPU usage and temperature monitoring
+- Memory usage statistics
+- Disk usage information
+- Network IP address display
+- Argon ONE logo screen
