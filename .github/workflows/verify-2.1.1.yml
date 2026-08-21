@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - fix/supervisor-api-cache-2.1.1
+  pull_request:
+    branches:
+      - main
 
 jobs:
   test:
