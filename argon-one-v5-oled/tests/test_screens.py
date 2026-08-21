@@ -59,7 +59,7 @@ class TestScreenRenderer(unittest.TestCase):
         """Test draw_progress_bar with solid style"""
         mock_draw = Mock()
 
-        self.renderer.draw_progress_bar(mock_draw, 10, 20, 100, 8, 50, "solid")
+        self.renderer.draw_progress_bar(mock_draw, 10, 20, 100, 8, 50, style="solid")
 
         # Verify rectangles were drawn
         self.assertTrue(mock_draw.rectangle.called)
@@ -69,7 +69,7 @@ class TestScreenRenderer(unittest.TestCase):
         """Test draw_progress_bar with striped style"""
         mock_draw = Mock()
 
-        self.renderer.draw_progress_bar(mock_draw, 10, 20, 100, 8, 50, "striped")
+        self.renderer.draw_progress_bar(mock_draw, 10, 20, 100, 8, 50, style="striped")
 
         # Verify lines were drawn
         self.assertTrue(mock_draw.line.called)
@@ -78,7 +78,7 @@ class TestScreenRenderer(unittest.TestCase):
         """Test draw_progress_bar with warning indicator"""
         mock_draw = Mock()
 
-        self.renderer.draw_progress_bar(mock_draw, 10, 20, 100, 8, 85, "solid")
+        self.renderer.draw_progress_bar(mock_draw, 10, 20, 100, 8, 85, style="solid")
 
         # Verify warning indicator drawn (extra rectangle)
         self.assertGreaterEqual(mock_draw.rectangle.call_count, 3)

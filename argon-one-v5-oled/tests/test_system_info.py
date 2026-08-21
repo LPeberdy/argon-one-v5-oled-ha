@@ -153,6 +153,32 @@ class TestSystemInfo(unittest.TestCase):
         uptime = self.system_info_c.get_uptime_seconds()
         self.assertEqual(uptime, 0)
 
+    @patch('system_info.glob.glob', return_value=['/sys/class/hwmon/hwmon3/name'])
+    @patch('system_info.os.path.exists', return_value=True)
+    @patch('builtins.open')
+    def test_get_fan_speed_remains_read_only_local_hwmon(self, mock_file, mock_exists, mock_glob):
+        """Supervisor caching must not alter native Pi 5 fan handling:
+        fan RPM/PWM are still read directly from hwmon and never written."""
+        file_data = {
+            '/sys/class/hwmon/hwmon3/name': 'pwmfan\n',
+            '/sys/class/hwmon/hwmon3/fan1_input': '3200\n',
+            '/sys/class/hwmon/hwmon3/pwm1': '128\n',
+        }
+
+        def open_file(path, mode='r', *args, **kwargs):
+            self.assertEqual(mode, 'r', f"fan hwmon path opened non-read-only: {path}")
+            return mock_open(read_data=file_data[path])()
+
+        mock_file.side_effect = open_file
+
+        fan = self.system_info_c.get_fan_speed()
+
+        self.assertEqual(fan['rpm'], 3200)
+        self.assertEqual(fan['pwm_percent'], int((128 / 255) * 100))
+        self.assertEqual(fan['status'], '3200 RPM')
+        mock_glob.assert_called_once_with('/sys/class/hwmon/hwmon*/name')
+        self.assertGreaterEqual(mock_file.call_count, 3)
+
 
 if __name__ == '__main__':
     unittest.main()
