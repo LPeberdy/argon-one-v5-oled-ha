@@ -68,6 +68,10 @@ class TestAppArmorProfile(unittest.TestCase):
         self.assertEqual(len(i2c_lines), 1)
         self.assertIn('/dev/i2c-1', i2c_lines[0])
 
+    def test_new_bundled_modules_are_read_only(self):
+        for filename in ('home_context.py', 'interruptions.py', 'visual_modes.py'):
+            self.assertIn(f'/{filename} r,', self.profile_text)
+
     def test_no_gpio_device_access(self):
         self.assertNotIn('gpiochip', self.profile_text.lower())
 
