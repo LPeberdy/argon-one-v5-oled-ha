@@ -1,5 +1,5 @@
 name: Argon ONE OLED Display
-version: 2.1.0
+version: 2.1.1
 slug: argon_one_oled_display
 description: Read-only system status on the Argon ONE Industria 128x64 OLED (Raspberry Pi 5)
 url: https://github.com/LPeberdy/argon-one-v5-oled-ha
